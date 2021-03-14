@@ -2,8 +2,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.nio.Buffer;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -73,9 +71,12 @@ public class TravelingSalesmanProblem {
         powerSetCities = getPowerSet(setOfCities, numCities, powerSetSize);
 
         /* find the length of the optimal tour */
-        optimalTour = solve(numCities, distMatrix, powerSetCities, costMap);
+        initializeCostMap();
 
-        System.out.println(costMap.get(new ArrayList<>(List.of(0,1,2))).get(0).cost);
+        //System.out.println(costMap.get(List.of(0,2)).get(2).cost);
+        optimalTour = solve(numCities, powerSetCities);
+
+        System.out.println(optimalTour.cost);
     }
 
     public static ArrayList<ArrayList<Integer>> getPowerSet(ArrayList<Integer> cities, int numCities, long powerSet_size){
@@ -98,28 +99,81 @@ public class TravelingSalesmanProblem {
         return powerSet;
     }
 
-    public static Bookkeeping solve(int n, double[][] dist, ArrayList<ArrayList<Integer>> powerSetCities, Map<ArrayList<Integer>, Map<Integer, Bookkeeping>> cost){
+    public static void initializeCostMap(){
 
-        /* When |S| > 1, C(S, 0) = INFINITY since the path cannot both start and end at 0 */
-        for(ArrayList<Integer> s : powerSetCities){
-            if(s.size() > 1){
-                cost.put(s, Map.of(0, new Bookkeeping(Double.POSITIVE_INFINITY, new ArrayList<>())));
+        for(ArrayList<Integer> set : powerSetCities){
+            costMap.put(set, new HashMap<>());
+
+            for(Integer i : setOfCities){
+                costMap.get(set).put(i, new Bookkeeping(0, new ArrayList<>()));
             }
         }
 
+    }
+
+    public static Bookkeeping solve(int n, ArrayList<ArrayList<Integer>> powerSetCities){
+
         /* C({0}, 0) = 0 */
-        cost.put(new ArrayList<>(List.of(0)), Map.of(0, new Bookkeeping(0, new ArrayList<>(List.of(0)))));
+        costMap.get(new ArrayList<>(List.of(0))).put(0, new Bookkeeping(0, new ArrayList<>(List.of(0))));
 
         /* Pseudocode from "Solving General TSP Exactly via Dynamic Programming" */
         for(int s = 2; s < n; s++){
             for(ArrayList<Integer> subset : powerSetCities){
                 if((subset.size() == s) && (subset.contains(0))){
-                    // rest of code
+                    /* When |S| > 1, C(S, 0) = INFINITY since the path cannot both start and end at 0 */
+                    for(ArrayList<Integer> set : powerSetCities){
+                        if(set.size() > 1){
+                            costMap.get(set).put(0, new Bookkeeping(Double.POSITIVE_INFINITY, new ArrayList<>()));
+                        }
+                    }
+
+                    for(int j = 0; j < subset.size(); j++){
+                        int elem = subset.get(j);
+                        if(elem != 0){
+                            Bookkeeping insertion = findMinimum(elem, subset);
+                            costMap.get(subset).put(elem, insertion);
+                        }
+                    }
                 }
             }
         }
 
-        return null;
+        return findMinimumCost();
+    }
+
+    public static Bookkeeping findMinimumCost(){
+        Bookkeeping minimum = new Bookkeeping(0.0, new ArrayList<>());
+
+        for(int j = 0; j < numCities; j++){
+            Bookkeeping candidateMin = costMap.get(setOfCities).get(j);
+            double costOfCandidateMin = candidateMin.cost + distMatrix[j][0];
+
+            if(costOfCandidateMin <= minimum.cost){
+                minimum = candidateMin;
+            }
+        }
+
+        return minimum;
+    }
+
+    public static Bookkeeping findMinimum(int j, ArrayList<Integer> s){
+        Bookkeeping minimum = new Bookkeeping(Double.POSITIVE_INFINITY, new ArrayList<>());
+
+        s = (ArrayList<Integer>) s.stream().filter(e -> e != j).collect(Collectors.toList());
+
+        for(Integer i : s){
+            if(i != j){
+                Bookkeeping candidateMin = costMap.get(s).get(i);
+                double costOfCandidateMin = candidateMin.cost + distMatrix[i][j];
+
+                if(costOfCandidateMin <= minimum.cost){
+                    minimum = candidateMin;
+                    minimum.cost = costOfCandidateMin;
+                }
+            }
+        }
+
+        return minimum;
     }
 }
 
