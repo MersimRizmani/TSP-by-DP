@@ -8,11 +8,11 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class TravelingSalesmanProblem {
-    public static int numCities;
-    public static Bookkeeping optimalTour;
-    public static double[][] distMatrix;
-    public static ArrayList<Integer> setOfCities;
-    public static ArrayList<ArrayList<Integer>> powerSetCities;
+    public static int numCities; // integer value denoting the number of cities
+    public static Bookkeeping optimalTour; // this will be the Bookkeeping object with the minimum cost of visiting all cities starting at 0
+    public static double[][] distMatrix; // 2D array containing the distances between the cities
+    public static ArrayList<Integer> setOfCities; // the set of cities from 0 to n
+    public static ArrayList<ArrayList<Integer>> powerSetCities; // the power set of the set of cities from 0 to n
 
     /*
     * this map will represent C(S, i) where S is an ArrayList<Integer>, i is an Integer and the cost is a field in the Bookkeeping class
@@ -20,7 +20,29 @@ public class TravelingSalesmanProblem {
     */
     public static Map<ArrayList<Integer>, Map<Integer, Bookkeeping>> costMap = new HashMap<>();
 
-    public static void main(String args[]){
+    public static void main(String[] args){
+
+        /* read in input data and set variables */
+        readData(args);
+
+        /* generate the set of cities */
+        setOfCities = (ArrayList<Integer>) IntStream.rangeClosed(0, numCities-1).boxed().collect(Collectors.toList());
+
+        /* retrieve the power set of the set of cities */
+        long powerSetSize = (long) Math.pow(2, numCities);
+        powerSetCities = getPowerSet(setOfCities, numCities, powerSetSize);
+
+        /* initialize the values in the cost map to their appropriate values */
+        initializeCostMap();
+
+        /* find the length of the optimal tour */
+        optimalTour = solve(numCities, powerSetCities);
+        System.out.println(optimalTour.cost);
+    }
+
+    public static void readData(String[] args){
+
+        /* retrieve input file from command line */
         File inFile = null;
         if (0 < args.length) {
             inFile = new File(args[0]);
@@ -64,21 +86,9 @@ public class TravelingSalesmanProblem {
                 ex.printStackTrace();
             }
         }
-
-        /* retrieve the power set of the set of cities */
-        setOfCities = (ArrayList<Integer>) IntStream.rangeClosed(0, numCities-1).boxed().collect(Collectors.toList());
-        long powerSetSize = (long) Math.pow(2, numCities);
-        powerSetCities = getPowerSet(setOfCities, numCities, powerSetSize);
-
-        /* find the length of the optimal tour */
-        initializeCostMap();
-
-        //System.out.println(costMap.get(List.of(0,2)).get(2).cost);
-        optimalTour = solve(numCities, powerSetCities);
-
-        System.out.println(optimalTour.cost);
     }
 
+    /* this function returns the power set of the set of cities from 0 to n */
     public static ArrayList<ArrayList<Integer>> getPowerSet(ArrayList<Integer> cities, int numCities, long powerSet_size){
         ArrayList<ArrayList<Integer>> powerSet = new ArrayList<>();
         ArrayList<Integer> intList;
@@ -99,18 +109,43 @@ public class TravelingSalesmanProblem {
         return powerSet;
     }
 
+    /* this function initializes the values in the cost map to their appropriate values */
     public static void initializeCostMap(){
 
         for(ArrayList<Integer> set : powerSetCities){
             costMap.put(set, new HashMap<>());
 
             for(Integer i : setOfCities){
-                costMap.get(set).put(i, new Bookkeeping(0, new ArrayList<>()));
+                costMap.get(set).put(i, new Bookkeeping(Double.POSITIVE_INFINITY, new ArrayList<>()));
             }
         }
 
+        for(ArrayList<Integer> s : powerSetCities){
+            if((s.size() == 2) && (s.contains(0))){
+                int j = s.get(1);
+                costMap.get(s).put(j, new Bookkeeping(distMatrix[0][j], new ArrayList<>()));
+            }
+        }
     }
 
+    /* this function returns the Bookkeeping object with the minimum cost of visiting all cities starting at 0 */
+    public static Bookkeeping findMinimumCost(){
+        Bookkeeping minimum = new Bookkeeping(Double.POSITIVE_INFINITY, new ArrayList<>());
+
+        for(int j = 0; j < numCities; j++){
+            Bookkeeping candidateMin = costMap.get(setOfCities).get(j);
+            double costOfCandidateMin = candidateMin.cost + distMatrix[j][0];
+
+            if(costOfCandidateMin <= minimum.cost){
+                minimum = candidateMin;
+                minimum.cost = costOfCandidateMin;
+            }
+        }
+
+        return minimum;
+    }
+
+    /* function that will implement the dynamic programming algorithm to solve the tsp */
     public static Bookkeeping solve(int n, ArrayList<ArrayList<Integer>> powerSetCities){
 
         /* C({0}, 0) = 0 */
@@ -120,18 +155,18 @@ public class TravelingSalesmanProblem {
         for(int s = 2; s < n; s++){
             for(ArrayList<Integer> subset : powerSetCities){
                 if((subset.size() == s) && (subset.contains(0))){
-                    /* When |S| > 1, C(S, 0) = INFINITY since the path cannot both start and end at 0 */
-                    for(ArrayList<Integer> set : powerSetCities){
-                        if(set.size() > 1){
-                            costMap.get(set).put(0, new Bookkeeping(Double.POSITIVE_INFINITY, new ArrayList<>()));
-                        }
-                    }
 
-                    for(int j = 0; j < subset.size(); j++){
-                        int elem = subset.get(j);
-                        if(elem != 0){
-                            Bookkeeping insertion = findMinimum(elem, subset);
-                            costMap.get(subset).put(elem, insertion);
+                    /* When |S| > 1, C(S, 0) = INFINITY since the path cannot both start and end at 0 */
+                    costMap.get(subset).put(0, new Bookkeeping(Double.POSITIVE_INFINITY, new ArrayList<>()));
+
+                    /*
+                        for all j IN subset, j != 0
+                             C(S, j) = min[ C(S - {j}, i), i IN S, i != j
+                    */
+                    for(Integer j : subset){
+                        if(j != 0){
+                            Bookkeeping insertion = findMinimum(j, subset);
+                            costMap.get(subset).put(j, insertion);
                         }
                     }
                 }
@@ -141,22 +176,10 @@ public class TravelingSalesmanProblem {
         return findMinimumCost();
     }
 
-    public static Bookkeeping findMinimumCost(){
-        Bookkeeping minimum = new Bookkeeping(0.0, new ArrayList<>());
-
-        for(int j = 0; j < numCities; j++){
-            Bookkeeping candidateMin = costMap.get(setOfCities).get(j);
-            double costOfCandidateMin = candidateMin.cost + distMatrix[j][0];
-
-            if(costOfCandidateMin <= minimum.cost){
-                minimum = candidateMin;
-            }
-        }
-
-        return minimum;
-    }
-
+    /* helper function for the algorithm that finds the Bookkeeping object minimum cost of visiting
+    all cities in subset s starting at 0 and ending at j */
     public static Bookkeeping findMinimum(int j, ArrayList<Integer> s){
+
         Bookkeeping minimum = new Bookkeeping(Double.POSITIVE_INFINITY, new ArrayList<>());
 
         s = (ArrayList<Integer>) s.stream().filter(e -> e != j).collect(Collectors.toList());
