@@ -14,6 +14,7 @@ public class TravelingSalesmanProblem {
     public static double[][] distMatrix; // 2D array containing the distances between the cities
     public static ArrayList<Integer> setOfCities; // the set of cities from 0 to n
     public static ArrayList<ArrayList<Integer>> powerSetCities; // the power set of the set of cities from 0 to n
+    public static ArrayList<ArrayList<ArrayList<Integer>>> sortedPowerSet; // the power set sorted by set size
 
     /*
     * this map will represent C(S, i) where S is an ArrayList<Integer>, i is an Integer and the cost is a field in the Bookkeeping class
