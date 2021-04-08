@@ -15,6 +15,7 @@ public class TravelingSalesmanProblem {
     public static ArrayList<Integer> setOfCities; // the set of cities from 0 to n
     public static ArrayList<ArrayList<Integer>> powerSetCities; // the power set of the set of cities from 0 to n
     public static ArrayList<ArrayList<ArrayList<Integer>>> sortedPowerSet; // the power set sorted by set size
+    public static int[] optTourCities;
 
     /*
     * this map will represent C(S, i) where S is an ArrayList<Integer>, i is an Integer and the cost is a field in the Bookkeeping class
@@ -41,6 +42,9 @@ public class TravelingSalesmanProblem {
         /* find the cost of the optimal tour starting at city 0 */
         optimalTour = solve(numCities, powerSetCities);
 
+        /* find the actual tour using traceback on predecessor cities */
+        optTourCities = findOptTour(optimalTour, setOfCities);
+
         /* print the number of cities */
         System.out.println("NUMBER OF CITIES: " + numCities + "\n");
 
@@ -61,10 +65,11 @@ public class TravelingSalesmanProblem {
         printMap();
 
         /* print the cost of the optimal tour */
-        System.out.println("COST OF OPTIMAL TOUR (starting at City 0): " + optimalTour.cost);
+        System.out.println("COST OF OPTIMAL TOUR (starting at City 0): " + optimalTour.cost + "\n");
 
         /* find the cities visiting on the optimal tour and print */
-        System.out.println("OPTIMAL TOUR (starting at City 0): " + "\n");
+        System.out.println("OPTIMAL TOUR (starting at City 0 and returning to City 0): ");
+        printOptTour();
     }
 
     public static void readData(String[] args){
@@ -147,14 +152,54 @@ public class TravelingSalesmanProblem {
             costMap.put(set, new HashMap<>());
 
             for(Integer i : setOfCities){
-                costMap.get(set).put(i, new Bookkeeping(Double.POSITIVE_INFINITY, 0));
+                costMap.get(set).put(i, new Bookkeeping(Double.POSITIVE_INFINITY, 0, 0));
             }
         }
     }
 
+    /* this function will perform a traceback and store the optimal tour in an ArrayList */
+    public static int[] findOptTour(Bookkeeping opt, ArrayList<Integer> subset) {
+        /* initialize the optimal tour to be the number of cities plus 1 for returning to city 0 */
+        optTourCities = new int[numCities+1];
+
+        /* last city in tour is always 0 */
+        optTourCities[numCities] = 0;
+
+        Bookkeeping temp = opt;
+        ArrayList<Integer> s = subset;
+
+        int indexCounter = numCities-1;
+
+        while((temp.optPred != -1) && (indexCounter >= 0)) {
+            final int curr = temp.lastCity;
+
+            optTourCities[indexCounter--] = temp.lastCity;
+
+            /* S - {j} */
+            s = (ArrayList<Integer>) s.stream().filter(e -> e != curr).collect(Collectors.toList());
+
+            temp = costMap.get(s).get(temp.optPred);
+        }
+
+        return optTourCities;
+    }
+
+    /* helper function to print optimal tour */
+    public static void printOptTour() {
+        for(int i = 0; i < optTourCities.length; i++) {
+            if(i == (optTourCities.length - 1)){
+                System.out.print(optTourCities[i]);
+            }
+            else{
+                System.out.print(optTourCities[i] + " -> ");
+            }
+        }
+        System.out.println();
+    }
+
     /* this function returns the Bookkeeping object with the minimum cost of visiting ALL cities starting at 0 */
     public static Bookkeeping findMinimumCost(){
-        Bookkeeping minimum = new Bookkeeping(Double.POSITIVE_INFINITY, 0);
+        Bookkeeping minimum = new Bookkeeping(Double.POSITIVE_INFINITY, 0, 0);
 
         for(int j = 0; j < numCities; j++){
             Bookkeeping candidateMin = costMap.get(setOfCities).get(j);
@@ -162,8 +207,11 @@ public class TravelingSalesmanProblem {
 
             if(costOfCandidateMin <= minimum.cost){
                 minimum.cost = costOfCandidateMin;
+                minimum.lastCity = j;
             }
         }
+
+        minimum.optPred = findMinimum(minimum.lastCity, setOfCities).optPred;
 
         return minimum;
     }
@@ -172,13 +220,13 @@ public class TravelingSalesmanProblem {
     public static Bookkeeping solve(int n, ArrayList<ArrayList<Integer>> powerSetCities){
 
         /* C({0}, 0) = 0 */
-        costMap.get(new ArrayList<>(List.of(0))).put(0, new Bookkeeping(0, 0));
+        costMap.get(new ArrayList<>(List.of(0))).put(0, new Bookkeeping(0, -1, 0));
 
         /* Pseudocode from "Solving General TSP Exactly via Dynamic Programming" */
         for(int s = 2; s <= n; s++){
             for(ArrayList<Integer> subset : sortedPowerSet.get(s-1)){ // optimized to not go through whole power set but rather just skip to correct size
                     /* When |S| > 1, C(S, 0) = INFINITY since the path cannot both start and end at 0 */
-                    costMap.get(subset).put(0, new Bookkeeping(Double.POSITIVE_INFINITY, 0));
+                    costMap.get(subset).put(0, new Bookkeeping(Double.POSITIVE_INFINITY, -1, -1));
 
                     /*
                         for all j IN subset, j != 0
@@ -201,7 +249,7 @@ public class TravelingSalesmanProblem {
     public static Bookkeeping findMinimum(int j, ArrayList<Integer> s){
 
         /* initialize a default minimum */
-        Bookkeeping minimum = new Bookkeeping(Double.POSITIVE_INFINITY, 0);
+        Bookkeeping minimum = new Bookkeeping(Double.POSITIVE_INFINITY, 0, 0);
 
         /* S - {j} */
         s = (ArrayList<Integer>) s.stream().filter(e -> e != j).collect(Collectors.toList());
@@ -213,6 +261,8 @@ public class TravelingSalesmanProblem {
 
                 if(costOfCandidateMin <= minimum.cost){
                     minimum.cost = costOfCandidateMin;
+                    minimum.optPred = i;
+                    minimum.lastCity = j;
                 }
             }
         }
@@ -316,9 +366,11 @@ public class TravelingSalesmanProblem {
 class Bookkeeping {
     double cost; // cost of tour starting at city 0 and ending at city j
     int optPred; // preceding city in the optimal tour
+    int lastCity; // store the last city in the tour
 
-    Bookkeeping(double c, int opt){
+    Bookkeeping(double c, int opt, int last){
         cost = c;
         optPred = opt;
+        lastCity = last;
     }
 }
