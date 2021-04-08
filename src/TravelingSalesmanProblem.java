@@ -33,6 +33,7 @@ public class TravelingSalesmanProblem {
         /* retrieve the power set of the set of cities */
         long powerSetSize = (long) Math.pow(2, numCities);
         powerSetCities = getPowerSet(setOfCities, numCities, powerSetSize);
+        organizePowerset();
 
         /* initialize the values in the cost map to their appropriate values */
         initializeCostMap();
@@ -50,6 +51,10 @@ public class TravelingSalesmanProblem {
         /* print the power set of cities that start at city 0 */
         System.out.println("POWER SET OF CITIES (starting at City 0) : ");
         printPowerSet();
+
+        /* print the power set of cities bucketed by size */
+        System.out.println("POWER SET OF CITIES (organized by size) :");
+        printOrganizedPowerSet();
 
         /* print the dynamic programming "table" */
         System.out.println("DYNAMIC PROGRAMMING 'TABLE' : ");
@@ -171,9 +176,7 @@ public class TravelingSalesmanProblem {
 
         /* Pseudocode from "Solving General TSP Exactly via Dynamic Programming" */
         for(int s = 2; s <= n; s++){
-            for(ArrayList<Integer> subset : powerSetCities){ // optimize to not go through whole power set but rather just skip to correct size
-                if(subset.size() == s){
-
+            for(ArrayList<Integer> subset : sortedPowerSet.get(s-1)){ // optimized to not go through whole power set but rather just skip to correct size
                     /* When |S| > 1, C(S, 0) = INFINITY since the path cannot both start and end at 0 */
                     costMap.get(subset).put(0, new Bookkeeping(Double.POSITIVE_INFINITY, 0));
 
@@ -187,7 +190,6 @@ public class TravelingSalesmanProblem {
                             costMap.get(subset).put(j, insertion);
                         }
                     }
-                }
             }
         }
 
@@ -281,6 +283,29 @@ public class TravelingSalesmanProblem {
 
         for(ArrayList<Integer> key : powerSetCities){
             System.out.print(key + " ");
+        }
+
+        System.out.println("\n");
+    }
+
+    /* this function will organize the subsets in the power set into a new ArrayList ordered indexed by size */
+    public static void organizePowerset() {
+        sortedPowerSet = new ArrayList<>(numCities);
+
+        for(int i = 0; i < numCities; i++) {
+            sortedPowerSet.add(new ArrayList<>());
+        }
+
+        for(ArrayList<Integer> subset : powerSetCities){
+            if(subset.size() > 0)
+                sortedPowerSet.get(subset.size() - 1).add(subset);
+        }
+    }
+
+    /* helper function to print organized power set */
+    public static void printOrganizedPowerSet() {
+        for(ArrayList<ArrayList<Integer>> bucket : sortedPowerSet) {
+            System.out.print(bucket + " ");
         }
 
         System.out.println("\n");
