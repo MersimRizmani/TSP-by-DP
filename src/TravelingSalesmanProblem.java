@@ -49,20 +49,20 @@ public class TravelingSalesmanProblem {
         System.out.println("NUMBER OF CITIES: " + numCities + "\n");
 
         /* print the distance matrix */
-        System.out.println("DISTANCE MATRIX : ");
-        printMatrix();
+        //System.out.println("DISTANCE MATRIX : ");
+        //printMatrix();
 
         /* print the power set of cities that start at city 0 */
-        System.out.println("POWER SET OF CITIES (starting at City 0) : ");
-        printPowerSet();
+        //System.out.println("POWER SET OF CITIES (starting at City 0) : ");
+        //printPowerSet();
 
         /* print the power set of cities bucketed by size */
-        System.out.println("POWER SET OF CITIES (organized by size) :");
-        printOrganizedPowerSet();
+        //System.out.println("POWER SET OF CITIES (organized by size) :");
+        //printOrganizedPowerSet();
 
         /* print the dynamic programming "table" */
-        System.out.println("DYNAMIC PROGRAMMING 'TABLE' : ");
-        printMap();
+        //System.out.println("DYNAMIC PROGRAMMING 'TABLE' : ");
+        //printMap();
 
         /* print the cost of the optimal tour */
         System.out.println("COST OF OPTIMAL TOUR (starting at City 0): " + optimalTour.cost + "\n");
